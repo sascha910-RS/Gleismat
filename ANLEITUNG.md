@@ -48,13 +48,43 @@ unterscheiden sich zwischen den OS-Versionen leicht; wo das der Fall ist, steht 
 
 ## 1. Dateien kopieren
 
-Kopiere `gleismat.html` und `kiosk.sh` in denselben Ordner auf dem Pi:
+`gleismat.html` und `kiosk.sh` müssen im selben Ordner auf dem Pi liegen. Am einfachsten
+holst du sie direkt auf dem Pi aus dem Repository:
 
 ```bash
-mkdir -p ~/gleismat
-# gleismat.html und kiosk.sh nach ~/gleismat kopieren (USB-Stick oder scp)
+git clone https://github.com/sascha910-RS/Gleismat.git ~/gleismat
 chmod +x ~/gleismat/kiosk.sh
 ```
+
+Oder du kopierst sie von einem anderen Rechner per SSH. Diese Befehle laufen auf dem
+Rechner, auf dem die Dateien liegen, nicht auf dem Pi (`HOSTNAME` ist der Name des Pi
+aus dem Raspberry Pi Imager):
+
+```bash
+ssh pi@HOSTNAME.local 'mkdir -p ~/gleismat'
+scp gleismat.html kiosk.sh pi@HOSTNAME.local:gleismat/
+```
+
+Alle weiteren Befehle dieser Anleitung laufen **auf dem Pi**: entweder direkt am Pi im
+Terminal oder in einem SSH-Fenster (`ssh pi@HOSTNAME.local`). Die Eingabezeile zeigt
+dann `pi@HOSTNAME`.
+
+### Kurzer Test
+
+Bevor du den Autostart einrichtest, prüfe, ob die Anzeige überhaupt läuft. Am Pi im
+Terminal der Desktop-Sitzung genügt `~/gleismat/kiosk.sh run`. In einem SSH-Fenster
+weiss das Skript nicht, auf welchem Bildschirm es anzeigen soll; dort sind es drei
+Zeilen mehr:
+
+```bash
+export XDG_RUNTIME_DIR=/run/user/$(id -u)
+if [ -e "$XDG_RUNTIME_DIR/wayland-0" ]; then export WAYLAND_DISPLAY=wayland-0; else export DISPLAY=:0; fi
+~/gleismat/kiosk.sh run
+```
+
+Gleismat erscheint im Vollbild auf dem Bildschirm des Pi. Beenden mit `Ctrl+C` (auf dem
+Mac die Taste **control**, nicht **command**) oder aus einem zweiten Fenster mit
+`~/gleismat/kiosk.sh stop`.
 
 Der Pi muss beim Booten automatisch in den Desktop einloggen:
 `sudo raspi-config` → *System Options* → *Boot / Auto Login* → *Desktop Autologin*.
@@ -342,7 +372,7 @@ sudo systemctl restart NetworkManager
 Kontrolle (muss `Power save: off` zeigen):
 
 ```bash
-iw dev wlan0 get power_save
+/usr/sbin/iw dev wlan0 get power_save
 ```
 
 Bricht die Verbindung trotzdem nach einiger Zeit ab, liegt es meist an einem von drei
