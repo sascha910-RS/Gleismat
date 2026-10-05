@@ -49,7 +49,7 @@ run_loop() {
     --deny-permission-prompts
     --password-store=basic                    # keine Schlüsselbund-Abfrage
     --hide-scrollbars
-    --force-device-scale-factor=1             # 1 CSS-Pixel = 1 Display-Pixel (768×1024)
+    --force-device-scale-factor=1             # 1 CSS-Pixel = 1 Display-Pixel; die Seite skaliert sich selbst
     --window-position=0,0
     --disk-cache-size=10485760                # Cache auf 10 MB begrenzen (SD-Karte, RAM)
   )

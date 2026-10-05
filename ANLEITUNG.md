@@ -273,7 +273,7 @@ sich gegenseitig, deshalb stehen alle Funktionen in einer einzigen Liste.
 | `--disable-notifications`, `--deny-permission-prompts` | keine Benachrichtigungen und Berechtigungsfragen |
 | `--password-store=basic` | keine Schlüsselbund-Abfrage |
 | `--hide-scrollbars` | keine Scrollbalken |
-| `--force-device-scale-factor=1` | 1 CSS-Pixel = 1 Display-Pixel (768×1024) |
+| `--force-device-scale-factor=1` | 1 CSS-Pixel = 1 Display-Pixel; die Seite skaliert sich selbst (siehe «Einstellungen der App») |
 | `--window-position=0,0` | Fenster oben links |
 | `--disk-cache-size=10485760` | Cache auf 10 MB begrenzen |
 | `--ozone-platform=wayland` | nur unter Wayland, wird automatisch gesetzt |
@@ -430,6 +430,22 @@ leerer Bildschirm. `Ctrl+Alt+T` öffnet dann ein Terminal.
 Am Anfang des Scripts in `gleismat.html` steht das Objekt `CONFIG`: Station,
 Abfrageintervall, Anzahl Zeilen, Filter, Rückfall auf «Alle» nach Inaktivität
 (`idleResetSec`, `0` = aus), nächtliches Neuladen (`nightlyReload`, `''` = aus) und Farben.
+
+### Bildschirmauflösung
+
+Das Layout ist für 768×1024 Pixel im Hochformat gebaut. Mit `fitToScreen: true`
+(Voreinstellung) skaliert die Seite es als Ganzes auf die Bildschirmgrösse, ohne es zu
+verzerren. Auf einem Display mit 2048×1536 Pixeln, das hochkant betrieben wird
+(1536×2048), ergibt das genau Faktor 2 und füllt den Bildschirm vollständig. Bei einem
+anderen Seitenverhältnis bleibt rechts oder unten ein Rand in der Hintergrundfarbe.
+
+Die Drehung ins Hochformat geschieht im System (Schritt 4), nicht in der App. Mit
+`fitToScreen: false` wird das Layout 1:1 in 768×1024 Pixeln oben links angezeigt.
+
+Der Pi 3 gibt über HDMI höchstens etwa 1920×1200 Pixel mit 60 Hz aus. 2048×1536 liegt
+darüber; je nach Display läuft es dann mit tieferer Bildwiederholrate oder in einer
+kleineren Auflösung. Für Gleismat reicht beides, weil die Anzeige keine Animationen hat.
+Die tatsächliche Auflösung zeigt `wlr-randr` (Wayland) bzw. `xrandr` (X11).
 
 Die API von transport.opendata.ch erlaubt eine begrenzte Zahl Abfragen pro Tag. Mit
 30 Sekunden Intervall sind es 2880 pro Tag; das Intervall deshalb nicht stark verkürzen.

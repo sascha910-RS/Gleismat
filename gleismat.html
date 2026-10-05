@@ -496,6 +496,8 @@
     idleResetSec: 120,                            // ohne Berührung zurück auf Standardfilter (0 = aus)
     nightlyReload: '03:30',                       // Seite einmal pro Nacht neu laden ('' = aus)
     mouseCursorHideSec: 5,                        // Mauszeiger nach … Sekunden ohne Mausbewegung ausblenden
+    fitToScreen: true,                            // Layout (768×1024) auf die Bildschirmgrösse skalieren,
+                                                  // z. B. Faktor 2 bei 1536×2048 (false = 1:1)
     timeZone: 'Europe/Zurich',
     locale: 'de-CH',
 
@@ -958,6 +960,14 @@
     }
   }
 
+  // Das Layout ist fest 768×1024 gebaut; auf grösseren oder kleineren Bildschirmen wird
+  // es als Ganzes skaliert, sodass es ohne Verzerrung möglichst viel Fläche füllt
+  function fitToScreen() {
+    if (!CONFIG.fitToScreen) return;
+    var scale = Math.min(window.innerWidth / 768, window.innerHeight / 1024);
+    if (scale > 0) document.documentElement.style.zoom = scale;
+  }
+
   /* ---------- Start ---------- */
   function init() {
     applyTheme(isNight(hhmm(Date.now())));
@@ -975,6 +985,10 @@
     // Zeilenhöhe so wählen, dass genau maxRows Zeilen in die Liste passen
     var rowH = Math.floor(elRows.clientHeight / CONFIG.maxRows);
     if (rowH > 0) document.documentElement.style.setProperty('--row-h', rowH + 'px');
+
+    // Erst nach dem Ausmessen skalieren, damit die Zeilenhöhe im Grundlayout berechnet wird
+    fitToScreen();
+    window.addEventListener('resize', fitToScreen);
 
     bindInput();
     buildFilters();
