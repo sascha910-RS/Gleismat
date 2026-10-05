@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=768, height=1024, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="google" content="notranslate">
+<title>Gleismat – Zürich Altstetten</title>
+<style>
+  /* Farben werden beim Start aus CONFIG.colors überschrieben */
+  :root {
+    --bg: #E9E9E9;
+    --surface: #FFFFFF;
+    --surface-alt: #F6F6F6;
+    --text: #333333;
+    --muted: #767676;
+    --line: #CFCFCF;
+    --accent: #C00000;
+    --tile: #5A5A5A;
+    --tile-pressed: #2E2E2E;
+    --tile2: #D6D6D6;
+    --tile2-pressed: #B4B4B4;
+    --badge-other: #8A8A8A;
+    --time: #222222;
+    --row-h: 62px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 768px;
+    height: 1024px;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Frutiger, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+    cursor: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    /* "none" ist strenger als "manipulation": weder Wischen noch Pinch noch Doppeltipp-Zoom */
+    touch-action: none;
+    overscroll-behavior: none;
+  }
+  /* Mauszeiger nur zeigen, solange eine Maus benutzt wird (Klasse wird per Script gesetzt) */
+  html.mouse, html.mouse body { cursor: default; }
+
+  #app {
+    position: absolute;
+    left: 0; top: 0;
+    width: 768px;
+    height: 1024px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ---------- Kopfzeile ---------- */
+  #header {
+    position: relative;
+    flex: 0 0 64px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+  #brand {
+    position: absolute;
+    left: 16px; top: 0;
+    line-height: 64px;
+    font-size: 15px;
+    color: var(--muted);
+  }
+  #station {
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    line-height: 64px;
+    text-align: center;
+    font-size: 28px;
+    color: var(--accent);
+  }
+  #clock {
+    position: absolute;
+    right: 16px; top: 13px;
+    text-align: right;
+    font-size: 14px;
+    line-height: 19px;
+    color: var(--muted);
+  }
+
+  /* ---------- Abschnittsbeschriftungen ---------- */
+  .section-label {
+    flex: 0 0 auto;
+    padding: 10px 16px 4px;
+    font-size: 15px;
+    color: var(--muted);
+  }
+
+  /* ---------- Abfahrtsliste ---------- */
+  #board {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-alt);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .row, #thead {
+    display: grid;
+    grid-template-columns: 104px 104px 84px 1fr 84px;
+    column-gap: 12px;
+    align-items: center;
+    padding: 0 16px;
+  }
+  #thead {
+    flex: 0 0 26px;
+    font-size: 14px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+  }
+  #thead .c-platform { text-align: center; }
+  #rows {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .row {
+    height: var(--row-h);
+    border-bottom: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .c-time { display: flex; flex-direction: column; justify-content: center; }
+  .time {
+    font-size: 34px;
+    font-weight: 600;
+    line-height: 34px;
+    color: var(--time);
+  }
+  .delay {
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 20px;
+    color: var(--accent);
+  }
+  .c-in {
+    font-size: 21px;
+    color: var(--muted);
+    white-space: nowrap;
+    line-height: 24px;
+  }
+  .run {
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 19px;
+    color: var(--accent);
+  }
+  .badge {
+    display: inline-block;
+    min-width: 68px;
+    padding: 0 8px;
+    height: 36px;
+    line-height: 36px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: #FFFFFF;
+    background: var(--badge-other);
+    white-space: nowrap;
+  }
+  .badge.k-s { background: var(--tile); }
+  .badge.k-fern { background: var(--accent); }
+  .c-dest {
+    font-size: 28px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .c-platform { text-align: center; }
+  .platform {
+    display: inline-block;
+    min-width: 56px;
+    height: 40px;
+    line-height: 40px;
+    padding: 0 6px;
+    text-align: center;
+    font-size: 30px;
+    font-weight: 600;
+  }
+  .platform.changed {
+    background: var(--accent);
+    color: #FFFFFF;
+  }
+  .empty {
+    padding: 40px 16px;
+    font-size: 26px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* ---------- Statuszeile unter der Liste ---------- */
+  #status {
+    flex: 0 0 40px;
+    display: flex;
+    align-items: center;
+    padding-left: 16px;
+    font-size: 15px;
+    color: var(--muted);
+  }
+  /* Roter Balken mit pfeilförmig zugespitzter rechter Kante */
+  #status.offline {
+    padding-left: 0;
+  }
+  #status.offline #status-text {
+    height: 34px;
+    line-height: 34px;
+    padding: 0 40px 0 16px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #FFFFFF;
+    background: var(--accent);
+    clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 0 100%);
+  }
+
+  /* ---------- Filter-Kacheln ---------- */
+  #filters {
+    flex: 0 0 104px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3px;
+  }
+  .tile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    white-space: pre-line;
+    font-size: 24px;
+    line-height: 30px;
+    color: #FFFFFF;
+    background: var(--tile);
+  }
+  #filters.many .tile { font-size: 20px; line-height: 26px; }
+  .tile.pressed { background: var(--tile-pressed); }
+  .tile.active { background: var(--accent); }
+
+  /* ---------- Fusszeile ---------- */
+  #footer {
+    flex: 0 0 96px;
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+  }
+  .foot-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .foot-btn svg { width: 44px; height: 44px; margin-bottom: 4px; }
+  .foot-btn.pressed { background: var(--tile2); color: var(--text); }
+
+  svg.icon {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* ---------- Overlay (Hilfe / Info) ---------- */
+  #overlay {
+    display: none;
+    position: absolute;
+    left: 0; top: 0;
+    width: 768px;
+    height: 1024px;
+    background: var(--bg);
+    flex-direction: column;
+  }
+  #overlay.open { display: flex; }
+  #overlay-head {
+    flex: 0 0 96px;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+  #overlay-title {
+    padding-left: 24px;
+    line-height: 96px;
+    font-size: 28px;
+    color: var(--accent);
+  }
+  #overlay-close {
+    flex: 0 0 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #FFFFFF;
+    background: var(--tile);
+  }
+  #overlay-close.pressed { background: var(--tile-pressed); }
+  .panel {
+    display: none;
+    margin: 0 0 16px;
+    padding: 8px 24px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+  .panel.open { display: block; }
+  .legend {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    align-items: center;
+    min-height: 66px;
+    border-bottom: 1px solid var(--line);
+    font-size: 21px;
+    line-height: 27px;
+  }
+  .legend:last-of-type { border-bottom: 0; }
+  .legend .sample-tile {
+    display: inline-block;
+    width: 120px;
+    height: 36px;
+    line-height: 36px;
+    text-align: center;
+    font-size: 17px;
+    color: #FFFFFF;
+    background: var(--accent);
+  }
+  .legend .sample-alert {
+    display: inline-block;
+    width: 130px;
+    height: 30px;
+    background: var(--accent);
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%);
+  }
+  .legend .sample-in { font-size: 21px; color: var(--muted); }
+  .note {
+    padding-top: 16px;
+    font-size: 17px;
+    line-height: 24px;
+    color: var(--muted);
+  }
+  .kv {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    min-height: 56px;
+    align-items: center;
+    border-bottom: 1px solid var(--line);
+    font-size: 21px;
+  }
+  .kv span:first-child { color: var(--muted); }
+  .about-name { padding: 16px 0 4px; font-size: 30px; }
+
+  /* Sekundäre Kacheln: hellgrau, Icon über dem Text, Pfeil rechts */
+  #actions {
+    display: none;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 3px;
+  }
+  #actions.open { display: grid; }
+  .tile2 {
+    position: relative;
+    height: 132px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 21px;
+    color: var(--text);
+    background: var(--tile2);
+  }
+  .tile2 svg { width: 44px; height: 44px; margin-bottom: 8px; }
+  .tile2::after {
+    content: ">";
+    position: absolute;
+    right: 22px; top: 0;
+    line-height: 132px;
+    font-size: 26px;
+    color: var(--muted);
+  }
+  .tile2.pressed { background: var(--tile2-pressed); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="header">
+    <div id="brand">Gleismat</div>
+    <div id="station"></div>
+    <div id="clock"><div id="clock-date"></div><div id="clock-time"></div></div>
+  </div>
+
+  <div class="section-label">Nächste Abfahrten</div>
+  <div id="board">
+    <div id="thead">
+      <div>Abfahrt</div><div></div><div>Linie</div><div>Ziel</div><div class="c-platform">Gleis</div>
+    </div>
+    <div id="rows"><div class="empty">Abfahrten werden geladen …</div></div>
+  </div>
+  <div id="status"><div id="status-text"></div></div>
+
+  <div class="section-label">Filter</div>
+  <div id="filters"></div>
+
+  <div id="footer">
+    <div class="foot-btn" data-action="help">
+      <svg class="icon" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18"/><path d="M16.5 17.5a5.5 5.5 0 1 1 8.5 4.6c-2 1.3-3 2.4-3 4.4"/><path d="M22 32v.5"/></svg>
+      Hilfe
+    </div>
+    <div class="foot-btn" data-action="info">
+      <svg class="icon" viewBox="0 0 44 44"><path d="M8 13h28M8 22h28M8 31h28"/></svg>
+      Info
+    </div>
+    <div></div>
+  </div>
+
+  <!-- Overlay für Hilfe und Info -->
+  <div id="overlay">
+    <div id="overlay-head">
+      <div id="overlay-title"></div>
+      <div id="overlay-close" data-action="close">Schliessen&nbsp;&nbsp;×</div>
+    </div>
+
+    <div class="section-label" id="overlay-label"></div>
+
+    <div class="panel" id="panel-help">
+      <div class="legend"><div><span class="badge k-s">S11</span></div><div>S-Bahn</div></div>
+      <div class="legend"><div><span class="badge k-fern">RE 36</span></div><div>Fernverkehr (IC, IR, RE …)</div></div>
+      <div class="legend"><div><span class="delay">+3'</span></div><div>Verspätung in Minuten, unter der planmässigen Abfahrtszeit</div></div>
+      <div class="legend"><div><span class="sample-in">in 5 min</span></div><div>Zeit bis zur tatsächlichen Abfahrt (inkl. Verspätung)</div></div>
+      <div class="legend"><div><span class="platform changed">4</span></div><div>Gleisänderung – der Zug fährt auf diesem Gleis</div></div>
+      <div class="legend"><div><span class="sample-tile">Filter</span></div><div>Rote Kachel = aktiver Filter</div></div>
+      <div class="legend"><div><span class="sample-alert"></span></div><div>Keine Verbindung – es werden die zuletzt geladenen Daten gezeigt</div></div>
+      <div class="note" id="help-note"></div>
+    </div>
+
+    <div class="panel" id="panel-info">
+      <div class="about-name">Gleismat</div>
+      <div class="note" style="padding-top:0;padding-bottom:12px">Live-Abfahrten am Bahnhof. Alle Angaben ohne Gewähr.</div>
+      <div class="kv"><span>Station</span><span id="info-station"></span></div>
+      <div class="kv"><span>Datenquelle</span><span>transport.opendata.ch</span></div>
+      <div class="kv"><span>Aktualisierung</span><span id="info-interval"></span></div>
+      <div class="kv"><span>Nachtmodus</span><span id="info-night"></span></div>
+      <div class="kv"><span>Letzte Aktualisierung</span><span id="info-last">–</span></div>
+      <div class="kv" style="border-bottom:0"><span>Verbindung</span><span id="info-conn">–</span></div>
+    </div>
+
+    <div id="actions">
+      <div class="tile2" data-action="refresh">
+        <svg class="icon" viewBox="0 0 44 44"><path d="M36 22a14 14 0 1 1-4.1-9.9"/><path d="M36 8v8h-8"/></svg>
+        Jetzt aktualisieren
+      </div>
+      <div class="tile2" data-action="reset">
+        <svg class="icon" viewBox="0 0 44 44"><path d="M8 11h28L25 24v10l-6 3V24z"/></svg>
+        Filter zurücksetzen
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ======================================================================
+     KONFIGURATION – alle wichtigen Einstellungen an einem Ort
+     ====================================================================== */
+  var CONFIG = {
+    appName: 'Gleismat',
+    station: 'Zürich Altstetten',                 // Stationsname (Anzeige + API-Abfrage)
+    apiUrl: 'https://transport.opendata.ch/v1/stationboard',
+    limit: 100,                                   // Anzahl Abfahrten, die von der API geholt werden
+                                                  // (so viele, dass auch enge Filter 10 Zeilen füllen)
+    // Nur diese Felder anfordern – hält die Antwort trotz hohem Limit klein
+    apiFields: [
+      'stationboard/category', 'stationboard/number', 'stationboard/name', 'stationboard/to',
+      'stationboard/stop/departure', 'stationboard/stop/departureTimestamp', 'stationboard/stop/delay',
+      'stationboard/stop/platform', 'stationboard/stop/prognosis', 'stationboard/passList/station/name'
+    ],
+    refreshSec: 30,                               // Daten neu laden alle … Sekunden
+    countdownSec: 15,                             // "in X min" aktualisieren alle … Sekunden
+    fetchTimeoutSec: 15,                          // Abbruch einer hängenden Abfrage
+    maxRows: 10,                                  // Zeilen, die ohne Scrollen Platz haben (10–12)
+    minDelayMin: 1,                               // Verspätung ab … Minuten anzeigen
+    runMin: 3,                                    // bis … Minuten vor tatsächlicher Abfahrt (inkl. Verspätung) Hinweis zeigen (0 = aus)
+    runText: 'rennen :-)',
+    idleResetSec: 120,                            // ohne Berührung zurück auf Standardfilter (0 = aus)
+    nightlyReload: '03:30',                       // Seite einmal pro Nacht neu laden ('' = aus)
+    mouseCursorHideSec: 5,                        // Mauszeiger nach … Sekunden ohne Mausbewegung ausblenden
+    timeZone: 'Europe/Zurich',
+    locale: 'de-CH',
+
+    // Filter-Kacheln (Reihenfolge = Anzeige). "\n" erzwingt einen Zeilenumbruch.
+    //   kind: 's' | 'fern'  -> nur diese Zugart
+    //   via:  'Stationsname' -> nur Züge, die dort halten oder enden (exakter Name wie in der API)
+    filters: [
+      { id: 'alle',  label: 'Alle' },
+      { id: 'sbahn', label: 'S-Bahn', kind: 's' },
+      { id: 'fern',  label: 'Fernverkehr', kind: 'fern' },
+      { id: 'hb',    label: 'Richtung\nZürich HB', via: 'Zürich HB' },
+      { id: 'wth',   label: 'Richtung\nWinterthur', via: 'Winterthur' },
+      { id: 'baden', label: 'Richtung\nBaden', via: 'Baden' }
+    ],
+    defaultFilter: 'alle',
+    sBahnCategories: ['S', 'SN'],
+    longDistanceCategories: ['IC', 'ICE', 'IR', 'RE', 'EC', 'TGV', 'RJ', 'RJX', 'NJ', 'EN', 'PE'],
+
+    // Farben (werden als CSS-Variablen gesetzt)
+    colors: {
+      bg: '#E9E9E9',
+      surface: '#FFFFFF',
+      'surface-alt': '#F6F6F6',
+      text: '#333333',
+      muted: '#767676',
+      line: '#CFCFCF',
+      accent: '#C00000',
+      tile: '#5A5A5A',
+      'tile-pressed': '#2E2E2E',
+      tile2: '#D6D6D6',
+      'tile2-pressed': '#B4B4B4',
+      time: '#222222'
+    },
+
+    // Nachtmodus: dunkles Farbschema, damit das Display den Raum nicht ausleuchtet
+    nightMode: {
+      enabled: true,
+      from: '21:00',                              // Beginn (HH:MM, Europe/Zurich)
+      to: '06:00',                                // Ende
+      colors: {                                   // überschreibt "colors" während der Nacht
+        bg: '#0E0E0E',
+        surface: '#1A1A1A',
+        'surface-alt': '#141414',
+        text: '#C8C8C8',
+        muted: '#858585',
+        line: '#303030',
+        accent: '#D62020',
+        tile: '#454545',
+        'tile-pressed': '#707070',
+        tile2: '#2A2A2A',
+        'tile2-pressed': '#4A4A4A',
+        time: '#EAEAEA'
+      }
+    }
+  };
+
+  var STORAGE_KEY = 'gleismat.filter';
+
+  /* ---------- Zustand ---------- */
+  var entries = [];          // zuletzt geladene Abfahrten (aufbereitet)
+  var hasData = false;       // mindestens einmal erfolgreich geladen
+  var online = true;
+  var lastOk = 0;            // Zeitpunkt der letzten erfolgreichen Abfrage (ms)
+  var loading = false;
+  var nextFetchAt = 0;
+  var lastCountdownAt = 0;
+  var lastTouchAt = Date.now();
+  var startedAt = Date.now();
+  var currentFilter = CONFIG.defaultFilter;
+  var shown = [];            // aktuell dargestellte Zeilen: { entry, inEl }
+  var shownKey = '';
+  var pressedEl = null;
+  var overlayMode = '';      // '', 'help' oder 'info'
+  var lastClock = '';
+  var nightActive = null;    // aktuelles Farbschema (null = noch nicht gesetzt)
+  var mouseActive = false;   // Mauszeiger sichtbar
+  var lastMouseAt = 0;
+
+  /* ---------- DOM-Referenzen ---------- */
+  function $(id) { return document.getElementById(id); }
+  var elRows = $('rows'), elStatus = $('status'), elStatusText = $('status-text');
+  var elFilters = $('filters'), elOverlay = $('overlay');
+  var filterEls = {};
+  var filterDefs = {};
+
+  /* ---------- Zeitformatierung (immer Europe/Zurich) ---------- */
+  var fmtTime = new Intl.DateTimeFormat(CONFIG.locale, {
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: CONFIG.timeZone
+  });
+  var fmtDate = new Intl.DateTimeFormat(CONFIG.locale, {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: CONFIG.timeZone
+  });
+  function hhmm(ms) { return fmtTime.format(new Date(ms)); }
+
+  // API liefert "2026-10-01T07:45:00+0200" – Doppelpunkt im Offset ergänzen
+  function parseTime(s) {
+    if (!s) return NaN;
+    return Date.parse(String(s).replace(/([+-]\d{2})(\d{2})$/, '$1:$2'));
+  }
+
+  /* ---------- Daten aufbereiten ---------- */
+  function parseEntry(j) {
+    var stop = j.stop || {};
+    var prog = stop.prognosis || {};
+    var planned = stop.departureTimestamp ? stop.departureTimestamp * 1000 : parseTime(stop.departure);
+    if (isNaN(planned)) return null;
+
+    var real = parseTime(prog.departure);
+    var delay = typeof stop.delay === 'number' ? stop.delay : 0;
+    if (isNaN(real)) real = planned + delay * 60000;
+    else if (!delay && real > planned) delay = Math.round((real - planned) / 60000);
+
+    // Gleis: Prognose hat Vorrang; ein "!" markiert in manchen Antworten eine Änderung
+    var plan = stop.platform ? String(stop.platform) : '';
+    var now = prog.platform ? String(prog.platform) : plan;
+    var changed = /!/.test(now) || /!/.test(plan);
+    plan = plan.replace(/!/g, '').trim();
+    now = now.replace(/!/g, '').trim();
+    if (plan && now && plan !== now) changed = true;
+
+    var cat = (j.category || '').trim();
+    var num = j.number == null ? '' : String(j.number).trim();
+    var kind = CONFIG.sBahnCategories.indexOf(cat) >= 0 ? 's'
+             : CONFIG.longDistanceCategories.indexOf(cat) >= 0 ? 'fern' : 'other';
+    // Sehr lange Nummern sind Zugnummern, keine Liniennummern -> weglassen
+    if (num.length > 3) num = '';
+    var line = kind === 's' ? cat + num : (num ? cat + ' ' + num : cat);
+
+    // Richtungsfilter: Ziel und alle späteren Halte merken
+    var to = j.to || '';
+    var stops = {};
+    stops[to] = true;
+    var pass = j.passList || [];
+    for (var i = 1; i < pass.length; i++) {
+      if (pass[i].station && pass[i].station.name) stops[pass[i].station.name] = true;
+    }
+
+    return {
+      key: (j.name || line) + '|' + planned + '|' + to,
+      line: line || '?', kind: kind, to: to,
+      planned: planned, real: real, delay: delay,
+      platform: now, platformChanged: changed, stops: stops
+    };
+  }
+
+  function matchesFilter(e) {
+    var f = filterDefs[currentFilter];
+    if (!f) return true;
+    if (f.kind && e.kind !== f.kind) return false;
+    if (f.via && !e.stops[f.via]) return false;
+    return true;
+  }
+
+  // Sichtbare Abfahrten: nicht abgefahren, zum Filter passend, auf maxRows begrenzt
+  function visibleEntries(now) {
+    var out = [];
+    for (var i = 0; i < entries.length && out.length < CONFIG.maxRows; i++) {
+      var e = entries[i];
+      if (e.real >= now && matchesFilter(e)) out.push(e);
+    }
+    return out;
+  }
+
+  function countdownText(e, now) {
+    var diff = e.real - now;
+    if (diff < 45000) return 'jetzt';
+    return 'in ' + Math.ceil(diff / 60000) + ' min';
+  }
+
+  // Hinweis unter dem Countdown, wenn der Zug in höchstens runMin Minuten fährt
+  function runText(e, now) {
+    return CONFIG.runMin > 0 && Math.ceil((e.real - now) / 60000) <= CONFIG.runMin ? CONFIG.runText : '';
+  }
+
+  /* ---------- Darstellung ---------- */
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  // Liste neu aufbauen – nur bei neuen Daten, Filterwechsel oder wenn ein Zug abgefahren ist
+  function render() {
+    var now = Date.now();
+    var list = visibleEntries(now);
+    var frag = document.createDocumentFragment();
+    shown = [];
+
+    if (!list.length) {
+      frag.appendChild(el('div', 'empty',
+        hasData ? 'Zurzeit keine Abfahrten für diesen Filter'
+                : (online ? 'Abfahrten werden geladen …' : 'Keine Daten verfügbar')));
+    }
+
+    for (var i = 0; i < list.length; i++) {
+      var e = list[i];
+      var row = el('div', 'row');
+
+      var cTime = el('div', 'c-time');
+      cTime.appendChild(el('div', 'time', hhmm(e.planned)));
+      if (e.delay >= CONFIG.minDelayMin) cTime.appendChild(el('div', 'delay', '+' + e.delay + "'"));
+      row.appendChild(cTime);
+
+      var cIn = el('div', 'c-in');
+      var inEl = el('div', null, countdownText(e, now));
+      var runEl = el('div', 'run', runText(e, now));
+      cIn.appendChild(inEl);
+      cIn.appendChild(runEl);
+      row.appendChild(cIn);
+
+      var cLine = el('div');
+      cLine.appendChild(el('span', 'badge k-' + e.kind, e.line));
+      row.appendChild(cLine);
+
+      row.appendChild(el('div', 'c-dest', e.to));
+
+      var cPlat = el('div', 'c-platform');
+      cPlat.appendChild(el('span', 'platform' + (e.platformChanged ? ' changed' : ''), e.platform || '–'));
+      row.appendChild(cPlat);
+
+      frag.appendChild(row);
+      shown.push({ entry: e, inEl: inEl, runEl: runEl });
+    }
+
+    elRows.replaceChildren(frag);
+    shownKey = keyOf(list);
+    lastCountdownAt = now;
+  }
+
+  function keyOf(list) {
+    var k = '';
+    for (var i = 0; i < list.length; i++) k += list[i].key + ';';
+    return k;
+  }
+
+  // Nur die "in X min"-Texte anpassen; neu aufbauen nur, wenn sich die Zeilen ändern
+  function refreshCountdown(now) {
+    if (keyOf(visibleEntries(now)) !== shownKey) { render(); return; }
+    for (var i = 0; i < shown.length; i++) {
+      var t = countdownText(shown[i].entry, now);
+      if (shown[i].inEl.textContent !== t) shown[i].inEl.textContent = t;
+      var r = runText(shown[i].entry, now);
+      if (shown[i].runEl.textContent !== r) shown[i].runEl.textContent = r;
+    }
+  }
+
+  function updateStatus() {
+    var last = lastOk ? hhmm(lastOk) : '';
+    elStatus.className = online ? '' : 'offline';
+    if (online) {
+      elStatusText.textContent = last ? 'Letzte Aktualisierung ' + last : '';
+    } else {
+      elStatusText.textContent = 'Keine Verbindung – ' +
+        (last ? 'letzte Aktualisierung ' + last : 'noch keine Daten');
+    }
+    $('info-last').textContent = last || '–';
+    $('info-conn').textContent = online ? 'in Ordnung' : 'unterbrochen';
+  }
+
+  /* ---------- Farbschema (Tag / Nacht) ---------- */
+  function isNight(time) {
+    var n = CONFIG.nightMode;
+    if (!n || !n.enabled) return false;
+    // Zeitraum über Mitternacht (22:00–06:00) oder innerhalb eines Tages
+    return n.from > n.to ? (time >= n.from || time < n.to) : (time >= n.from && time < n.to);
+  }
+
+  // Setzt die CSS-Variablen; wird nur beim Wechsel Tag/Nacht tatsächlich ausgeführt
+  function applyTheme(night) {
+    if (night === nightActive) return;
+    nightActive = night;
+    var name, style = document.documentElement.style;
+    for (name in CONFIG.colors) style.setProperty('--' + name, CONFIG.colors[name]);
+    if (night) {
+      for (name in CONFIG.nightMode.colors) style.setProperty('--' + name, CONFIG.nightMode.colors[name]);
+    }
+  }
+
+  function updateClock(now) {
+    var d = new Date(now);
+    var date = fmtDate.format(d), time = fmtTime.format(d);
+    if (date + time === lastClock) return;
+    lastClock = date + time;
+    applyTheme(isNight(time));
+    $('clock-date').textContent = date;
+    $('clock-time').textContent = time;
+  }
+
+  /* ---------- Daten laden ---------- */
+  function loadData() {
+    if (loading) return;
+    loading = true;
+    nextFetchAt = Date.now() + CONFIG.refreshSec * 1000;
+
+    var ctrl = new AbortController();
+    var timeout = setTimeout(function () { ctrl.abort(); }, CONFIG.fetchTimeoutSec * 1000);
+    var url = CONFIG.apiUrl + '?station=' + encodeURIComponent(CONFIG.station) + '&limit=' + CONFIG.limit;
+    for (var f = 0; f < CONFIG.apiFields.length; f++) url += '&fields[]=' + CONFIG.apiFields[f];
+
+    fetch(url, { cache: 'no-store', signal: ctrl.signal })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        if (!data || !Array.isArray(data.stationboard)) throw new Error('Unerwartete Antwort');
+        var list = [];
+        for (var i = 0; i < data.stationboard.length; i++) {
+          var e = parseEntry(data.stationboard[i]);
+          if (e) list.push(e);
+        }
+        // Reihenfolge wie an der Bahnhofsanzeige: nach planmässiger Abfahrt
+        list.sort(function (a, b) { return a.planned - b.planned; });
+        entries = list;
+        hasData = true;
+        online = true;
+        lastOk = Date.now();
+        render();
+        updateStatus();
+      })
+      .catch(function () {
+        // Letzte Daten bleiben stehen; der nächste Versuch folgt automatisch
+        online = false;
+        updateStatus();
+        if (!hasData) render();
+      })
+      .then(function () {
+        clearTimeout(timeout);
+        loading = false;
+      });
+  }
+
+  /* ---------- Filter ---------- */
+  function setFilter(id) {
+    if (!filterEls[id]) id = CONFIG.defaultFilter;
+    if (id === currentFilter && filterEls[id].classList.contains('active')) return;
+    currentFilter = id;
+    for (var k in filterEls) filterEls[k].classList.toggle('active', k === id);
+    try { localStorage.setItem(STORAGE_KEY, id); } catch (err) { /* Speicher nicht verfügbar */ }
+    render();
+  }
+
+  function buildFilters() {
+    CONFIG.filters.forEach(function (f) {
+      var t = el('div', 'tile', f.label);
+      t.setAttribute('data-filter', f.id);
+      elFilters.appendChild(t);
+      filterEls[f.id] = t;
+      filterDefs[f.id] = f;
+    });
+    // Alle Kacheln in einer Zeile; ab 5 Kacheln kleinere Schrift, damit die Texte passen
+    elFilters.style.gridTemplateColumns = 'repeat(' + CONFIG.filters.length + ', 1fr)';
+    elFilters.classList.toggle('many', CONFIG.filters.length > 4);
+    var saved = null;
+    try { saved = localStorage.getItem(STORAGE_KEY); } catch (err) { /* ignorieren */ }
+    setFilter(saved || CONFIG.defaultFilter);
+  }
+
+  /* ---------- Overlay ---------- */
+  function openOverlay(mode) {
+    overlayMode = mode;
+    var help = mode === 'help';
+    $('overlay-title').textContent = help ? 'Hilfe' : 'Info';
+    $('overlay-label').textContent = help ? 'Legende der Farben und Symbole' : 'Über diese Anzeige';
+    $('panel-help').classList.toggle('open', help);
+    $('panel-info').classList.toggle('open', !help);
+    $('actions').classList.toggle('open', !help);
+    elOverlay.classList.add('open');
+  }
+  function closeOverlay() {
+    overlayMode = '';
+    elOverlay.classList.remove('open');
+  }
+
+  /* ---------- Eingaben ---------- */
+  function onAction(action) {
+    if (action === 'help' || action === 'info') openOverlay(action);
+    else if (action === 'close') closeOverlay();
+    else if (action === 'refresh') { loadData(); closeOverlay(); }
+    else if (action === 'reset') { setFilter(CONFIG.defaultFilter); closeOverlay(); }
+  }
+
+  function touchTarget(node) {
+    return node && node.closest ? node.closest('[data-filter],[data-action]') : null;
+  }
+  function clearPressed() {
+    if (pressedEl) { pressedEl.classList.remove('pressed'); pressedEl = null; }
+  }
+
+  // Zeiger einblenden, sobald eine Maus bewegt wird; bei Touch sofort wieder ausblenden
+  function setMouse(on) {
+    if (on) lastMouseAt = Date.now();
+    if (on === mouseActive) return;
+    mouseActive = on;
+    document.documentElement.classList.toggle('mouse', on);
+  }
+
+  function bindInput() {
+    document.addEventListener('pointermove', function (ev) {
+      if (ev.pointerType === 'mouse') setMouse(true);
+    });
+
+    // Sofortiges Feedback beim Antippen/Anklicken (Farbwechsel ohne Animation)
+    document.addEventListener('pointerdown', function (ev) {
+      lastTouchAt = Date.now();
+      setMouse(ev.pointerType === 'mouse');
+      clearPressed();
+      pressedEl = touchTarget(ev.target);
+      if (pressedEl) pressedEl.classList.add('pressed');
+    });
+    document.addEventListener('pointerup', clearPressed);
+    document.addEventListener('pointercancel', clearPressed);
+
+    document.addEventListener('click', function (ev) {
+      var t = touchTarget(ev.target);
+      if (!t) return;
+      if (t.hasAttribute('data-filter')) setFilter(t.getAttribute('data-filter'));
+      else onAction(t.getAttribute('data-action'));
+    });
+
+    // Kontextmenü, Textauswahl, Drag, Zoom-Gesten unterdrücken
+    var block = function (ev) { ev.preventDefault(); };
+    ['contextmenu', 'selectstart', 'dragstart', 'gesturestart', 'gesturechange', 'dblclick']
+      .forEach(function (name) { document.addEventListener(name, block); });
+    document.addEventListener('touchmove', block, { passive: false });
+    document.addEventListener('wheel', function (ev) { if (ev.ctrlKey) ev.preventDefault(); }, { passive: false });
+
+    // Tastatur (nur Wartung): F5 lädt neu, Ctrl +/-/0 (Zoom) wird blockiert
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'F5') { ev.preventDefault(); location.reload(); }
+      else if (ev.ctrlKey && ['+', '-', '=', '0'].indexOf(ev.key) >= 0) ev.preventDefault();
+      else if (ev.key === 'Escape') closeOverlay();
+    });
+  }
+
+  /* ---------- Ein einziger Takt-Timer für alles (keine Timer-Lecks) ---------- */
+  function tick() {
+    var now = Date.now();
+    updateClock(now);
+
+    if (now >= nextFetchAt) loadData();
+    if (now - lastCountdownAt >= CONFIG.countdownSec * 1000) {
+      lastCountdownAt = now;
+      refreshCountdown(now);
+    }
+
+    if (mouseActive && now - lastMouseAt >= CONFIG.mouseCursorHideSec * 1000) setMouse(false);
+
+    // Nach Inaktivität: Overlay schliessen und auf Standardfilter zurück
+    if (CONFIG.idleResetSec > 0 && now - lastTouchAt >= CONFIG.idleResetSec * 1000) {
+      lastTouchAt = now;
+      if (overlayMode) closeOverlay();
+      if (currentFilter !== CONFIG.defaultFilter) setFilter(CONFIG.defaultFilter);
+    }
+
+    // Nächtliches Neuladen (frühestens 5 Minuten nach dem Start, damit keine Schleife entsteht)
+    if (CONFIG.nightlyReload && now - startedAt > 300000 && hhmm(now) === CONFIG.nightlyReload) {
+      location.reload();
+    }
+  }
+
+  /* ---------- Start ---------- */
+  function init() {
+    applyTheme(isNight(hhmm(Date.now())));
+    $('info-night').textContent = CONFIG.nightMode && CONFIG.nightMode.enabled
+      ? CONFIG.nightMode.from + '–' + CONFIG.nightMode.to + ' Uhr' : 'aus';
+    $('brand').textContent = CONFIG.appName;
+    $('station').textContent = CONFIG.station;
+    $('info-station').textContent = CONFIG.station;
+    $('info-interval').textContent = 'alle ' + CONFIG.refreshSec + ' Sekunden';
+    $('help-note').textContent = CONFIG.appName + ' – Daten: transport.opendata.ch. ' +
+      (CONFIG.idleResetSec > 0
+        ? 'Der Filter springt nach ' + Math.round(CONFIG.idleResetSec / 60) + ' Minuten ohne Berührung auf «Alle» zurück.'
+        : '');
+
+    // Zeilenhöhe so wählen, dass genau maxRows Zeilen in die Liste passen
+    var rowH = Math.floor(elRows.clientHeight / CONFIG.maxRows);
+    if (rowH > 0) document.documentElement.style.setProperty('--row-h', rowH + 'px');
+
+    bindInput();
+    buildFilters();
+    updateClock(Date.now());
+    updateStatus();
+    loadData();
+    setInterval(tick, 1000);   // läuft für die gesamte Lebensdauer der Seite
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
