@@ -167,6 +167,11 @@ Mausbewegung wieder erscheinen. Mit `-idle 0` wäre eine Maus kaum benutzbar.
 `kiosk.sh run` startet Chromium und startet ihn nach 2 Sekunden neu, wenn er abstürzt
 oder geschlossen wird.
 
+Beim ersten Start nach dem Booten bleibt das Chromium-Fenster auf dem Pi 3 leer; erst
+der zweite Start zeigt die Seite. `kiosk.sh` beendet Chromium deshalb einmal pro Boot
+nach 30 Sekunden (`WARMUP_SEC`) und startet ihn neu. Nach dem Einschalten siehst du also
+zuerst rund 30 Sekunden ein leeres Fenster, dann kurz den Desktop und danach Gleismat.
+
 ### Wayland (labwc)
 
 `~/.config/labwc/autostart`, vollständig:
@@ -360,7 +365,8 @@ Die App selbst übersteht Unterbrüche: Sie zeigt die letzten Daten mit dem rote
 sudo reboot
 ```
 
-Nach dem Booten erscheint Gleismat im Vollbild und im Hochformat. Prüfen:
+Nach dem Booten erscheint Gleismat im Vollbild und im Hochformat, rund 30 Sekunden nach
+dem ersten leeren Chromium-Fenster (siehe Schritt 6). Prüfen:
 
 - Tippen trifft die richtige Kachel (Touch-Drehung stimmt).
 - Kein Mauszeiger, keine Taskleiste.

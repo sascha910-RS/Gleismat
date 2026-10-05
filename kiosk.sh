@@ -12,7 +12,9 @@ PROFILE="$HOME/.config/gleismat-chromium"          # eigenes Profil, getrennt vo
 RUN_DIR="${XDG_RUNTIME_DIR:-/tmp}"
 STOP_FLAG="$RUN_DIR/gleismat.stop"                 # existiert = Wartungsmodus (verschwindet beim Reboot)
 PID_FILE="$RUN_DIR/gleismat.pid"
+WARM_FLAG="$RUN_DIR/gleismat.warm"                 # existiert = seit dem Booten schon einmal gestartet
 RESTART_DELAY=2
+WARMUP_SEC=30
 
 BROWSER="$(command -v chromium || command -v chromium-browser)"
 
@@ -64,6 +66,13 @@ run_loop() {
     PREFS="$PROFILE/Default/Preferences"
     if [ -f "$PREFS" ]; then
       sed -i 's/"exited_cleanly":false/"exited_cleanly":true/; s/"exit_type":"[^"]*"/"exit_type":"Normal"/' "$PREFS"
+    fi
+
+    # Beim ersten Start nach dem Booten bleibt das Chromium-Fenster auf dem Pi 3 leer;
+    # erst der zweite Start zeigt die Seite. Deshalb den ersten Start einmal beenden.
+    if [ ! -f "$WARM_FLAG" ]; then
+      touch "$WARM_FLAG"
+      (sleep "$WARMUP_SEC"; pkill -f -- "--user-data-dir=$PROFILE") &
     fi
 
     "$BROWSER" "${FLAGS[@]}" "$URL" >/dev/null 2>&1
