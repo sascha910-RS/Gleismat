@@ -1,5 +1,5 @@
 #!/bin/bash
-# Gleismat – Kiosk-Starter für Raspberry Pi OS (X11 und Wayland/labwc)
+# Track-O-Mat – Kiosk-Starter für Raspberry Pi OS (X11 und Wayland/labwc)
 #
 #   kiosk.sh run     Chromium im Kiosk-Modus starten und bei Absturz/Beenden neu starten
 #   kiosk.sh stop    Wartung: Neustart-Schleife anhalten und Chromium beenden
@@ -7,14 +7,14 @@
 #   kiosk.sh status  Zustand anzeigen
 
 APP_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-URL="file://$APP_DIR/gleismat.html"
-PROFILE="$HOME/.config/gleismat-chromium"          # eigenes Profil, getrennt vom normalen Browser
+URL="file://$APP_DIR/track-o-mat.html"
+PROFILE="$HOME/.config/track-o-mat-chromium"       # eigenes Profil, getrennt vom normalen Browser
 RUN_DIR="${XDG_RUNTIME_DIR:-/tmp}"
-STOP_FLAG="$RUN_DIR/gleismat.stop"                 # existiert = Wartungsmodus (verschwindet beim Reboot)
-PID_FILE="$RUN_DIR/gleismat.pid"
-WARM_FLAG="$RUN_DIR/gleismat.warm"                 # existiert = seit dem Booten schon einmal gestartet
+STOP_FLAG="$RUN_DIR/track-o-mat.stop"              # existiert = Wartungsmodus (verschwindet beim Reboot)
+PID_FILE="$RUN_DIR/track-o-mat.pid"
+WARM_FLAG="$RUN_DIR/track-o-mat.warm"              # existiert = seit dem Booten schon einmal gestartet
 RESTART_DELAY=2
-WARMUP_SEC=30
+WARMUP_SEC=30                                      # einmaliger Neustart nach dem Booten (0 = aus)
 
 BROWSER="$(command -v chromium || command -v chromium-browser)"
 
@@ -23,7 +23,7 @@ loop_running() {
 }
 
 run_loop() {
-  if loop_running; then echo "Gleismat-Kiosk läuft bereits."; exit 0; fi
+  if loop_running; then echo "Track-O-Mat-Kiosk läuft bereits."; exit 0; fi
   if [ -z "$BROWSER" ]; then echo "Chromium nicht gefunden." >&2; exit 1; fi
   echo $$ > "$PID_FILE"
   trap 'rm -f "$PID_FILE"' EXIT
@@ -68,9 +68,10 @@ run_loop() {
       sed -i 's/"exited_cleanly":false/"exited_cleanly":true/; s/"exit_type":"[^"]*"/"exit_type":"Normal"/' "$PREFS"
     fi
 
-    # Beim ersten Start nach dem Booten bleibt das Chromium-Fenster auf dem Pi 3 leer;
-    # erst der zweite Start zeigt die Seite. Deshalb den ersten Start einmal beenden.
-    if [ ! -f "$WARM_FLAG" ]; then
+    # Auf dem Pi 3 blieb das Chromium-Fenster beim ersten Start nach dem Booten leer;
+    # erst der zweite Start zeigte die Seite. Deshalb den ersten Start einmal beenden.
+    # Auf dem Pi 4 ungetestet: läuft es dort ohne, WARMUP_SEC=0 setzen.
+    if [ "$WARMUP_SEC" -gt 0 ] && [ ! -f "$WARM_FLAG" ]; then
       touch "$WARM_FLAG"
       (sleep "$WARMUP_SEC"; pkill -f -- "--user-data-dir=$PROFILE") &
     fi
@@ -93,7 +94,7 @@ case "${1:-run}" in
     ;;
   start)
     rm -f "$STOP_FLAG"
-    if loop_running; then echo "Gleismat-Kiosk läuft bereits."; exit 0; fi
+    if loop_running; then echo "Track-O-Mat-Kiosk läuft bereits."; exit 0; fi
     if [ -z "$WAYLAND_DISPLAY" ] && [ -z "$DISPLAY" ]; then
       echo "Keine grafische Sitzung in dieser Konsole. Ctrl+Alt+Shift+K am Bildschirm drücken oder 'sudo reboot'." >&2
       exit 1

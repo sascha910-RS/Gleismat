@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=768, height=1024, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="google" content="notranslate">
-<title>Gleismat – Zürich Altstetten</title>
+<title>Track-O-Mat – Zürich Altstetten</title>
 <style>
   /* Farben werden beim Start aus CONFIG.colors überschrieben */
   :root {
@@ -393,7 +393,7 @@
 <div id="app">
 
   <div id="header">
-    <div id="brand">Gleismat</div>
+    <div id="brand">Track-O-Mat</div>
     <div id="station"></div>
     <div id="clock"><div id="clock-date"></div><div id="clock-time"></div></div>
   </div>
@@ -443,7 +443,7 @@
     </div>
 
     <div class="panel" id="panel-info">
-      <div class="about-name">Gleismat</div>
+      <div class="about-name">Track-O-Mat</div>
       <div class="note" style="padding-top:0;padding-bottom:12px">Live-Abfahrten am Bahnhof. Alle Angaben ohne Gewähr.</div>
       <div class="kv"><span>Station</span><span id="info-station"></span></div>
       <div class="kv"><span>Datenquelle</span><span>transport.opendata.ch</span></div>
@@ -475,7 +475,7 @@
      KONFIGURATION – alle wichtigen Einstellungen an einem Ort
      ====================================================================== */
   var CONFIG = {
-    appName: 'Gleismat',
+    appName: 'Track-O-Mat',
     station: 'Zürich Altstetten',                 // Stationsname (Anzeige + API-Abfrage)
     apiUrl: 'https://transport.opendata.ch/v1/stationboard',
     limit: 100,                                   // Anzahl Abfahrten, die von der API geholt werden
@@ -554,7 +554,7 @@
     }
   };
 
-  var STORAGE_KEY = 'gleismat.filter';
+  var STORAGE_KEY = 'track-o-mat.filter';
 
   /* ---------- Zustand ---------- */
   var entries = [];          // zuletzt geladene Abfahrten (aufbereitet)

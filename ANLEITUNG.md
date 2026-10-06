@@ -1,23 +1,34 @@
-# Gleismat auf dem Raspberry Pi 3 einrichten
+# Track-O-Mat auf dem Raspberry Pi 4 einrichten
 
-Diese Anleitung richtet einen Pi 3 (Model B oder B+) mit aktuellem Raspberry Pi OS
-(Desktop-Variante) so ein, dass er nach dem Einschalten `gleismat.html` in Chromium im
+Diese Anleitung richtet einen Pi 4 Model B (4 GB RAM) mit aktuellem Raspberry Pi OS
+(Desktop-Variante) so ein, dass er nach dem Einschalten `track-o-mat.html` in Chromium im
 Kiosk-Modus zeigt.
 
-Besonderheiten des Pi 3:
+Besonderheiten des Pi 4:
 
-- **64-Bit-System verwenden.** Im Raspberry Pi Imager als Gerät «Raspberry Pi 3» und als
-  System «Raspberry Pi OS (64-bit)» wählen. Die 32-Bit-Variante läuft ebenfalls und
-  braucht etwas weniger Arbeitsspeicher; die Anleitung gilt für beide.
-- **WLAN ist eingebaut.** Ein USB-WLAN-Stick ist nicht nötig. Das WLAN richtest du im
-  Raspberry Pi Imager oder mit `sudo raspi-config` → *System Options* → *Wireless LAN*
-  ein. Der Pi 3 Model B funkt nur auf 2,4 GHz, der Pi 3 Model B+ zusätzlich auf 5 GHz.
+- **64-Bit-System verwenden.** Im Raspberry Pi Imager als Gerät «Raspberry Pi 4» und als
+  System «Raspberry Pi OS (64-bit)» wählen.
+- **Netzteil:** USB-C mit 5 V und mindestens 3 A, am besten das offizielle. Ein zu
+  schwaches Netzteil oder ein dünnes Kabel bremst den Pi stark aus und führt zu
+  Abstürzen und WLAN-Abbrüchen (Kontrolle: `vcgencmd get_throttled` muss
+  `throttled=0x0` zeigen).
+- **Zwei Micro-HDMI-Anschlüsse.** Es braucht ein Kabel oder einen Adapter von Micro-HDMI
+  auf HDMI. Das Display kommt an den Anschluss direkt neben der USB-C-Buchse (HDMI 0);
+  er heisst im System `HDMI-A-1`, der zweite `HDMI-A-2`.
+- **WLAN ist eingebaut** und funkt auf 2,4 und 5 GHz. Das WLAN richtest du im Raspberry
+  Pi Imager oder mit `sudo raspi-config` → *System Options* → *Wireless LAN* ein.
   Schritt 8 hält die Verbindung im Dauerbetrieb stabil.
-- **1 GB RAM, Prozessor mit 4 × 1,2 GHz** (B+: 4 × 1,4 GHz). Chromium braucht nach dem
-  Booten einige Sekunden bis zur ersten Anzeige; danach läuft die App flüssig, weil sie
-  nur alle 30 Sekunden Daten lädt und keine Animationen hat.
-- **Netzteil:** 5 V mit mindestens 2,5 A (Micro-USB). Ein zu schwaches Netzteil führt zu
-  Abstürzen und WLAN-Abbrüchen.
+- **Kühlung.** Der Pi 4 wird im Dauerbetrieb warm und drosselt ab 80 °C. In einem
+  geschlossenen Gehäuse hinter dem Display Kühlkörper oder ein Gehäuse mit Kühlung
+  verwenden (Kontrolle: `vcgencmd measure_temp`).
+
+### Umzug von einem bereits eingerichteten Pi 3
+
+Die SD-Karte eines mit dieser Anleitung eingerichteten Pi 3 (64-Bit-System) lässt sich
+direkt in den Pi 4 stecken: Autostart, Tastenkürzel, WLAN und die App-Dateien bleiben
+erhalten. Danach nur `sudo apt update && sudo apt full-upgrade` ausführen und die
+Kontrollen aus Schritt 9 durchgehen. Mit einem 32-Bit-System geht das ebenfalls;
+empfohlen ist dann aber eine Neuinstallation mit 64 Bit.
 
 ## Platzhalter
 
@@ -30,13 +41,13 @@ auf dem Pi und setze sie dann beim Abtippen der Codeblöcke ein:
 | `HDMI-A-1` / `HDMI-1` | Name des Displays | Wayland: `wlr-randr` · X11: `xrandr` |
 | `TOUCH-NAME` | Name des Touch-Geräts | Wayland: `sudo libinput list-devices` · X11: `xinput list` |
 
-Angepasst werden sie **nicht** in `gleismat.html` oder `kiosk.sh`, sondern in den
+Angepasst werden sie **nicht** in `track-o-mat.html` oder `kiosk.sh`, sondern in den
 Konfigurationsdateien, die du in den Schritten 4, 6 und 7 auf dem Pi anlegst. Du
 brauchst nur die Spalte, die zu deinem System passt (Schritt 2):
 
 | Platzhalter | Wayland (labwc) | X11 |
 |---|---|---|
-| `pi` im Pfad `/home/pi/gleismat/kiosk.sh` | `~/.config/labwc/autostart` (1×, Schritt 6) und `~/.config/labwc/rc.xml` (2×, Schritt 7) | `~/.config/lxsession/LXDE-pi/autostart` (1×, Schritt 6) und `~/.config/openbox/lxde-pi-rc.xml` (2×, Schritt 7) |
+| `pi` im Pfad `/home/pi/track-o-mat/kiosk.sh` | `~/.config/labwc/autostart` (1×, Schritt 6) und `~/.config/labwc/rc.xml` (2×, Schritt 7) | `~/.config/lxsession/LXDE-pi/autostart` (1×, Schritt 6) und `~/.config/openbox/lxde-pi-rc.xml` (2×, Schritt 7) |
 | Displayname | `HDMI-A-1` in `~/.config/labwc/autostart` (Zeile `wlr-randr`) und in `~/.config/labwc/rc.xml` (`mapToOutput`) | `HDMI-1` in `~/.config/lxsession/LXDE-pi/autostart` (Zeile `@xrandr`) |
 | `TOUCH-NAME` | `~/.config/labwc/rc.xml` (Zeile `<touch deviceName=…>`) | `~/.config/lxsession/LXDE-pi/autostart` (Zeile `@xinput set-prop`) |
 
@@ -48,12 +59,12 @@ unterscheiden sich zwischen den OS-Versionen leicht; wo das der Fall ist, steht 
 
 ## 1. Dateien kopieren
 
-`gleismat.html` und `kiosk.sh` müssen im selben Ordner auf dem Pi liegen. Am einfachsten
+`track-o-mat.html` und `kiosk.sh` müssen im selben Ordner auf dem Pi liegen. Am einfachsten
 holst du sie direkt auf dem Pi aus dem Repository:
 
 ```bash
-git clone https://github.com/sascha910-RS/Gleismat.git ~/gleismat
-chmod +x ~/gleismat/kiosk.sh
+git clone https://github.com/sascha910-RS/Track-O-Mat.git ~/track-o-mat
+chmod +x ~/track-o-mat/kiosk.sh
 ```
 
 Oder du kopierst sie von einem anderen Rechner per SSH. Diese Befehle laufen auf dem
@@ -61,8 +72,8 @@ Rechner, auf dem die Dateien liegen, nicht auf dem Pi (`HOSTNAME` ist der Name d
 aus dem Raspberry Pi Imager):
 
 ```bash
-ssh pi@HOSTNAME.local 'mkdir -p ~/gleismat'
-scp gleismat.html kiosk.sh pi@HOSTNAME.local:gleismat/
+ssh pi@HOSTNAME.local 'mkdir -p ~/track-o-mat'
+scp track-o-mat.html kiosk.sh pi@HOSTNAME.local:track-o-mat/
 ```
 
 Alle weiteren Befehle dieser Anleitung laufen **auf dem Pi**: entweder direkt am Pi im
@@ -72,19 +83,19 @@ dann `pi@HOSTNAME`.
 ### Kurzer Test
 
 Bevor du den Autostart einrichtest, prüfe, ob die Anzeige überhaupt läuft. Am Pi im
-Terminal der Desktop-Sitzung genügt `~/gleismat/kiosk.sh run`. In einem SSH-Fenster
+Terminal der Desktop-Sitzung genügt `~/track-o-mat/kiosk.sh run`. In einem SSH-Fenster
 weiss das Skript nicht, auf welchem Bildschirm es anzeigen soll; dort sind es drei
 Zeilen mehr:
 
 ```bash
 export XDG_RUNTIME_DIR=/run/user/$(id -u)
 if [ -e "$XDG_RUNTIME_DIR/wayland-0" ]; then export WAYLAND_DISPLAY=wayland-0; else export DISPLAY=:0; fi
-~/gleismat/kiosk.sh run
+~/track-o-mat/kiosk.sh run
 ```
 
-Gleismat erscheint im Vollbild auf dem Bildschirm des Pi. Beenden mit `Ctrl+C` (auf dem
+Track-O-Mat erscheint im Vollbild auf dem Bildschirm des Pi. Beenden mit `Ctrl+C` (auf dem
 Mac die Taste **control**, nicht **command**) oder aus einem zweiten Fenster mit
-`~/gleismat/kiosk.sh stop`.
+`~/track-o-mat/kiosk.sh stop`.
 
 Der Pi muss beim Booten automatisch in den Desktop einloggen:
 `sudo raspi-config` → *System Options* → *Boot / Auto Login* → *Desktop Autologin*.
@@ -99,9 +110,8 @@ echo $XDG_SESSION_TYPE
 - Ausgabe `x11` → Abschnitte mit **X11** befolgen.
 
 Wechseln kannst du unter `sudo raspi-config` → *Advanced Options* → *Wayland*.
-Auf dem Pi 3 funktionieren beide Varianten; du kannst bei der Voreinstellung deines
-Systems bleiben. Reagiert die Anzeige unter Wayland träge, wechsle auf X11: Es braucht
-weniger Rechenleistung und Arbeitsspeicher.
+Auf dem Pi 4 ist Wayland (labwc) die Voreinstellung und die empfohlene Variante. Die
+X11-Abschnitte gelten, falls dein System damit läuft.
 
 ## 3. Bildschirmschoner und Energiesparmodus abschalten
 
@@ -197,10 +207,15 @@ Mausbewegung wieder erscheinen. Mit `-idle 0` wäre eine Maus kaum benutzbar.
 `kiosk.sh run` startet Chromium und startet ihn nach 2 Sekunden neu, wenn er abstürzt
 oder geschlossen wird.
 
-Beim ersten Start nach dem Booten bleibt das Chromium-Fenster auf dem Pi 3 leer; erst
-der zweite Start zeigt die Seite. `kiosk.sh` beendet Chromium deshalb einmal pro Boot
-nach 30 Sekunden (`WARMUP_SEC`) und startet ihn neu. Nach dem Einschalten siehst du also
-zuerst rund 30 Sekunden ein leeres Fenster, dann kurz den Desktop und danach Gleismat.
+Auf dem Pi 3 blieb das Chromium-Fenster beim ersten Start nach dem Booten leer; erst
+der zweite Start zeigte die Seite. `kiosk.sh` beendet Chromium deshalb einmal pro Boot nach
+30 Sekunden und startet ihn neu (`WARMUP_SEC` am Anfang des Skripts). Nach dem
+Einschalten siehst du also zuerst rund 30 Sekunden Chromium, dann kurz den Desktop und
+danach wieder Track-O-Mat.
+
+Ob der Pi 4 diesen Neustart braucht, ist nicht getestet. Zeigt Chromium schon in den
+ersten 30 Sekunden die Abfahrten, ist er unnötig: Setze dann `WARMUP_SEC=0`, und
+Track-O-Mat bleibt ab dem ersten Start stehen.
 
 ### Wayland (labwc)
 
@@ -209,7 +224,7 @@ zuerst rund 30 Sekunden ein leeres Fenster, dann kurz den Desktop und danach Gle
 ```bash
 wlr-randr --output HDMI-A-1 --transform 90
 (sleep 5 && wtype -M logo -k h -m logo) &
-/home/pi/gleismat/kiosk.sh run &
+/home/pi/track-o-mat/kiosk.sh run &
 ```
 
 Taskleiste und Desktop abschalten, damit sie auch in den 2 Sekunden eines Neustarts
@@ -247,7 +262,7 @@ dann ergänzen:
 @xrandr --output HDMI-1 --rotate left
 @xinput set-prop "TOUCH-NAME" "Coordinate Transformation Matrix" 0 -1 1 1 0 0 0 0 1
 @unclutter -idle 3 -root
-@/home/pi/gleismat/kiosk.sh run
+@/home/pi/track-o-mat/kiosk.sh run
 ```
 
 ### Chromium-Startparameter
@@ -258,7 +273,7 @@ sich gegenseitig, deshalb stehen alle Funktionen in einer einzigen Liste.
 | Parameter | Zweck |
 |---|---|
 | `--kiosk` | Vollbild ohne Adressleiste, Tabs und Menüs |
-| `--user-data-dir=~/.config/gleismat-chromium` | eigenes Profil; `localStorage` (Filterwahl) bleibt erhalten |
+| `--user-data-dir=~/.config/track-o-mat-chromium` | eigenes Profil; `localStorage` (Filterwahl) bleibt erhalten |
 | `--no-first-run` | kein Willkommens-Assistent |
 | `--no-default-browser-check` | keine Standardbrowser-Frage |
 | `--noerrdialogs` | keine Fehlerdialoge |
@@ -291,7 +306,7 @@ nicht auslösen.
 | Tasten | Wirkung |
 |---|---|
 | `Ctrl+Alt+Shift+Q` | Wartung: zuerst den automatischen Neustart stoppen, dann Chromium beenden; der Desktop ist danach zugänglich |
-| `Ctrl+Alt+Shift+K` | Kiosk wieder starten (oder im Terminal: `~/gleismat/kiosk.sh start`) |
+| `Ctrl+Alt+Shift+K` | Kiosk wieder starten (oder im Terminal: `~/track-o-mat/kiosk.sh start`) |
 
 Den automatischen Neustart übernimmt die Schleife in `kiosk.sh run`; einen separaten
 systemd-Dienst gibt es nicht. `kiosk.sh stop` legt zuerst die Stopp-Markierung an und
@@ -310,10 +325,10 @@ schaltet den Konsolenwechsel nirgends ab. Vorgehen siehe Schritt 10.
   <keyboard>
     <default />
     <keybind key="C-A-S-q">
-      <action name="Execute" command="/home/pi/gleismat/kiosk.sh stop" />
+      <action name="Execute" command="/home/pi/track-o-mat/kiosk.sh stop" />
     </keybind>
     <keybind key="C-A-S-k">
-      <action name="Execute" command="/home/pi/gleismat/kiosk.sh start" />
+      <action name="Execute" command="/home/pi/track-o-mat/kiosk.sh start" />
     </keybind>
     <keybind key="W-h">
       <action name="HideCursor" />
@@ -347,10 +362,10 @@ Innerhalb von `<keyboard> … </keyboard>` einfügen:
 
 ```xml
 <keybind key="C-A-S-q">
-  <action name="Execute"><command>/home/pi/gleismat/kiosk.sh stop</command></action>
+  <action name="Execute"><command>/home/pi/track-o-mat/kiosk.sh stop</command></action>
 </keybind>
 <keybind key="C-A-S-k">
-  <action name="Execute"><command>/home/pi/gleismat/kiosk.sh start</command></action>
+  <action name="Execute"><command>/home/pi/track-o-mat/kiosk.sh start</command></action>
 </keybind>
 ```
 
@@ -358,7 +373,7 @@ Innerhalb von `<keyboard> … </keyboard>` einfügen:
 
 ## 8. WLAN-Energiesparmodus abschalten
 
-Das eingebaute WLAN des Pi 3 heisst `wlan0`. Energiesparmodus für alle WLAN-Verbindungen
+Das eingebaute WLAN des Pi 4 heisst `wlan0`. Energiesparmodus für alle WLAN-Verbindungen
 abschalten:
 
 ```bash
@@ -375,15 +390,14 @@ Kontrolle (muss `Power save: off` zeigen):
 /usr/sbin/iw dev wlan0 get power_save
 ```
 
-Bricht die Verbindung trotzdem nach einiger Zeit ab, liegt es meist an einem von drei
+Bricht die Verbindung trotzdem nach einiger Zeit ab, liegt es meist an einem von zwei
 Dingen:
 
-- **Zu schwaches Netzteil.** Ein Netzteil mit 5 V und mindestens 2,5 A verwenden.
+- **Zu schwaches Netzteil.** Ein USB-C-Netzteil mit 5 V und mindestens 3 A verwenden.
   `vcgencmd get_throttled` muss `throttled=0x0` zeigen; jeder andere Wert bedeutet
   Unterspannung oder Überhitzung.
-- **Falsches Frequenzband.** Der Pi 3 Model B sieht nur 2,4-GHz-Netze. Sendet der
-  Router das Netz nur auf 5 GHz, findet der Pi es nicht.
-- **WLAN-Land nicht gesetzt.** `sudo raspi-config` → *Localisation Options* →
+- **WLAN-Land nicht gesetzt.** Ohne Land bleibt das WLAN gesperrt oder findet
+  5-GHz-Netze nicht. `sudo raspi-config` → *Localisation Options* →
   *WLAN Country* → **CH**.
 
 Die App selbst übersteht Unterbrüche: Sie zeigt die letzten Daten mit dem roten Hinweis
@@ -395,8 +409,11 @@ Die App selbst übersteht Unterbrüche: Sie zeigt die letzten Daten mit dem rote
 sudo reboot
 ```
 
-Nach dem Booten erscheint Gleismat im Vollbild und im Hochformat, rund 30 Sekunden nach
-dem ersten leeren Chromium-Fenster (siehe Schritt 6). Prüfen:
+Nach dem Booten erscheint Track-O-Mat im Vollbild und im Hochformat; nach 30 Sekunden
+startet Chromium einmal neu (siehe Schritt 6). Prüfen:
+
+- `vcgencmd get_throttled` zeigt `throttled=0x0` und `vcgencmd measure_temp` bleibt
+  deutlich unter 80 °C.
 
 - Tippen trifft die richtige Kachel (Touch-Drehung stimmt).
 - Kein Mauszeiger, keine Taskleiste.
@@ -411,12 +428,12 @@ dem ersten leeren Chromium-Fenster (siehe Schritt 6). Prüfen:
 | Kiosk beenden und Neustart-Schleife stoppen | `Ctrl+Alt+Shift+Q` |
 | Terminal öffnen (nach dem Stoppen) | `Ctrl+Alt+T` |
 | Kiosk wieder aktivieren | `Ctrl+Alt+Shift+K` oder `sudo reboot` |
-| Zustand abfragen | `~/gleismat/kiosk.sh status` |
+| Zustand abfragen | `~/track-o-mat/kiosk.sh status` |
 
 Falls die Tastenkürzel nicht greifen, geht es immer über die Textkonsole:
 
 1. `Ctrl+Alt+F2` drücken und einloggen.
-2. `~/gleismat/kiosk.sh stop`
+2. `~/track-o-mat/kiosk.sh stop`
 3. Mit `Ctrl+Alt+F7` (X11) bzw. `Ctrl+Alt+F1` (Wayland) zurück zur grafischen Oberfläche.
 
 Dasselbe funktioniert per SSH. Der Wartungsmodus gilt bis zum nächsten Neustart des Pi;
@@ -427,7 +444,7 @@ leerer Bildschirm. `Ctrl+Alt+T` öffnet dann ein Terminal.
 
 ## Einstellungen der App
 
-Am Anfang des Scripts in `gleismat.html` steht das Objekt `CONFIG`: Station,
+Am Anfang des Scripts in `track-o-mat.html` steht das Objekt `CONFIG`: Station,
 Abfrageintervall, Anzahl Zeilen, Filter, Rückfall auf «Alle» nach Inaktivität
 (`idleResetSec`, `0` = aus), nächtliches Neuladen (`nightlyReload`, `''` = aus) und Farben.
 
@@ -442,10 +459,8 @@ anderen Seitenverhältnis bleibt rechts oder unten ein Rand in der Hintergrundfa
 Die Drehung ins Hochformat geschieht im System (Schritt 4), nicht in der App. Mit
 `fitToScreen: false` wird das Layout 1:1 in 768×1024 Pixeln oben links angezeigt.
 
-Der Pi 3 gibt über HDMI höchstens etwa 1920×1200 Pixel mit 60 Hz aus. 2048×1536 liegt
-darüber; je nach Display läuft es dann mit tieferer Bildwiederholrate oder in einer
-kleineren Auflösung. Für Gleismat reicht beides, weil die Anzeige keine Animationen hat.
-Die tatsächliche Auflösung zeigt `wlr-randr` (Wayland) bzw. `xrandr` (X11).
+Der Pi 4 gibt über HDMI bis 4K aus; 2048×1536 mit 60 Hz liegt klar darunter. Die
+tatsächliche Auflösung zeigt `wlr-randr` (Wayland) bzw. `xrandr` (X11).
 
 Die API von transport.opendata.ch erlaubt eine begrenzte Zahl Abfragen pro Tag. Mit
 30 Sekunden Intervall sind es 2880 pro Tag; das Intervall deshalb nicht stark verkürzen.
