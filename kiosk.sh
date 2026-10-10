@@ -14,7 +14,7 @@ STOP_FLAG="$RUN_DIR/track-o-mat.stop"              # existiert = Wartungsmodus (
 PID_FILE="$RUN_DIR/track-o-mat.pid"
 WARM_FLAG="$RUN_DIR/track-o-mat.warm"              # existiert = seit dem Booten schon einmal gestartet
 RESTART_DELAY=2
-WARMUP_SEC=30                                      # einmaliger Neustart nach dem Booten (0 = aus)
+WARMUP_SEC=0                                       # einmaliger Neustart nach dem Booten (0 = aus, Pi 3: 30)
 
 BROWSER="$(command -v chromium || command -v chromium-browser)"
 
@@ -69,8 +69,8 @@ run_loop() {
     fi
 
     # Auf dem Pi 3 blieb das Chromium-Fenster beim ersten Start nach dem Booten leer;
-    # erst der zweite Start zeigte die Seite. Deshalb den ersten Start einmal beenden.
-    # Auf dem Pi 4 ungetestet: läuft es dort ohne, WARMUP_SEC=0 setzen.
+    # erst der zweite Start zeigte die Seite. Mit WARMUP_SEC > 0 wird der erste Start
+    # deshalb einmal beendet. Der Pi 4 braucht das nicht.
     if [ "$WARMUP_SEC" -gt 0 ] && [ ! -f "$WARM_FLAG" ]; then
       touch "$WARM_FLAG"
       (sleep "$WARMUP_SEC"; pkill -f -- "--user-data-dir=$PROFILE") &

@@ -207,15 +207,11 @@ Mausbewegung wieder erscheinen. Mit `-idle 0` wäre eine Maus kaum benutzbar.
 `kiosk.sh run` startet Chromium und startet ihn nach 2 Sekunden neu, wenn er abstürzt
 oder geschlossen wird.
 
-Auf dem Pi 3 blieb das Chromium-Fenster beim ersten Start nach dem Booten leer; erst
-der zweite Start zeigte die Seite. `kiosk.sh` beendet Chromium deshalb einmal pro Boot nach
-30 Sekunden und startet ihn neu (`WARMUP_SEC` am Anfang des Skripts). Nach dem
-Einschalten siehst du also zuerst rund 30 Sekunden Chromium, dann kurz den Desktop und
-danach wieder Track-O-Mat.
-
-Ob der Pi 4 diesen Neustart braucht, ist nicht getestet. Zeigt Chromium schon in den
-ersten 30 Sekunden die Abfahrten, ist er unnötig: Setze dann `WARMUP_SEC=0`, und
-Track-O-Mat bleibt ab dem ersten Start stehen.
+Auf dem Pi 4 zeigt Chromium die Seite direkt beim ersten Start. Auf einem Pi 3 blieb das
+Fenster beim ersten Start nach dem Booten leer; erst der zweite Start zeigte die Seite.
+Dafür gibt es in `kiosk.sh` die Einstellung `WARMUP_SEC` (voreingestellt `0` = aus): Mit
+`WARMUP_SEC=30` beendet das Skript Chromium einmal pro Boot nach 30 Sekunden und startet
+ihn neu.
 
 ### Wayland (labwc)
 
@@ -409,8 +405,7 @@ Die App selbst übersteht Unterbrüche: Sie zeigt die letzten Daten mit dem rote
 sudo reboot
 ```
 
-Nach dem Booten erscheint Track-O-Mat im Vollbild und im Hochformat; nach 30 Sekunden
-startet Chromium einmal neu (siehe Schritt 6). Prüfen:
+Nach dem Booten erscheint Track-O-Mat im Vollbild und im Hochformat. Prüfen:
 
 - `vcgencmd get_throttled` zeigt `throttled=0x0` und `vcgencmd measure_temp` bleibt
   deutlich unter 80 °C.
